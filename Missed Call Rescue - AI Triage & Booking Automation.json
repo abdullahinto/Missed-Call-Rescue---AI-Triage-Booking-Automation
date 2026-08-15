@@ -1,0 +1,1272 @@
+{
+  "name": "'Missed Call Rescue' AI triage & booking automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "missed-call-rescue",
+        "responseMode": "onReceived",
+        "options": {
+          "responseCode": 200,
+          "responseData": "OK"
+        }
+      },
+      "id": "e9b425c6-d298-4000-968e-e00dfc48956d",
+      "name": "Missed Call Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        2368,
+        3968
+      ],
+      "webhookId": "4875e060-4d1e-4b1c-9837-607a059dcc6e"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "07cfb057-3b4b-4364-8d4f-165859c5b566",
+              "leftValue": "={{ $json.body.CallSid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "92f64af0-6e8d-43d4-874a-e0d174a82af6",
+              "leftValue": "={{ $json.body.To }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "795ed5ce-d225-4cfd-a584-d3db29dd9bec",
+      "name": "If Payload Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2592,
+        3968
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "REPLACE_WITH_ADMIN_EMAIL",
+        "subject": "\u26a0\ufe0f Missed Call Rescue \u2014 malformed webhook payload",
+        "emailType": "text",
+        "message": "=A call event hit the Missed Call Rescue webhook without a CallSid or a To number, so it was rejected before any business lookup or SMS was attempted.\n\nRaw payload:\n{{ JSON.stringify($json.body) }}\n\nReceived at: {{ $now.toFormat(\"cccc, dd LLLL yyyy, hh:mm:ss a\") }}\n\nWorth checking whether the call-tracking provider changed its webhook format.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "f7a4a09b-4c06-46cb-8ef9-c9d6cd1f9612",
+      "name": "Notify Malformed Webhook",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2592,
+        4224
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_YOUR_GMAIL_CRED_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "errorMessage": "Missed Call Rescue stopped: incoming webhook payload was missing CallSid and/or To, so no business could be matched and no message was sent."
+      },
+      "id": "c6f764cb-4806-4612-a341-ce9ed04f7288",
+      "name": "Stop and Error (Invalid Webhook)",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        2816,
+        4224
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Missed Call Rescue - Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 0,
+          "mode": "list",
+          "cachedResultName": "Client Directory",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_SHEET_ID/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "BusinessPhone",
+              "lookupValue": "={{ $json.body.To }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f7192b65-1e8a-4bb5-9595-ae7ea0a3ffa9",
+      "name": "Get Business Config",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2816,
+        3968
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_YOUR_GOOGLE_SHEETS_CRED_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0a3c9df4-5a08-44cf-95b0-13702a7158ea",
+              "leftValue": "={{ $json.BusinessName }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "354649d6-a2d5-4dbe-8cae-920b29ee7999",
+      "name": "If Business Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3040,
+        3968
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "REPLACE_WITH_ADMIN_EMAIL",
+        "subject": "\u26a0\ufe0f Missed Call Rescue \u2014 no client matches this number",
+        "emailType": "text",
+        "message": "=A missed call came in for {{ $('Missed Call Webhook').first().json.body.To }}, but that number isn't in the Client Directory sheet, so no business config could be loaded and no reply was sent to the caller.\n\nCaller: {{ $('Missed Call Webhook').first().json.body.From }}\nRun time: {{ $now.toFormat(\"cccc, dd LLLL yyyy, hh:mm:ss a\") }}\n\nWorth checking whether this is a new client that hasn't been added to the directory yet, or a Twilio number typo.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "c2b9937c-30e1-4328-a4cd-3cf3b9de8220",
+      "name": "Notify Unknown Business Number",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        3040,
+        4224
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_YOUR_GMAIL_CRED_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "errorMessage": "Missed Call Rescue stopped: the called number has no matching row in the Client Directory sheet, so no business config was available to build a reply."
+      },
+      "id": "42b48997-f3b8-4605-a1e3-84028e598bb0",
+      "name": "Stop and Error (Unknown Business Number)",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        3264,
+        4224
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Missed Call Rescue - Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 111111111,
+          "mode": "list",
+          "cachedResultName": "Call Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_SHEET_ID/edit#gid=111111111"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {}
+      },
+      "id": "81203f2e-326b-4676-81cb-9f149ad1e17d",
+      "name": "Get Recent Call Log",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3264,
+        3968
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_YOUR_GOOGLE_SHEETS_CRED_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Twilio retries webhooks it doesn't get a fast 200 for, so the same\n// CallSid can hit this workflow more than once. This node folds the\n// current call event, the matched business config, and the recent call\n// log together into one clean context object, and flags duplicates\n// before anything gets texted twice.\n\nconst callData = $('Missed Call Webhook').first().json.body || {};\nconst businessConfig = $('Get Business Config').first().json || {};\nconst logRows = $input.all().map(i => i.json);\n\nconst callSid = callData.CallSid || '';\nconst isDuplicate = logRows.some(row => String(row.CallSID) === String(callSid));\n\nreturn [{\n  json: {\n    call_sid: callSid,\n    from_number: callData.From || '',\n    to_number: callData.To || '',\n    transcript: callData.TranscriptionText || callData.VoicemailTranscript || '',\n    business_name: businessConfig.BusinessName || '',\n    tone_notes: businessConfig.ToneNotes || '',\n    emergency_keywords: (businessConfig.EmergencyKeywords || '')\n      .split(',').map(s => s.trim()).filter(Boolean),\n    on_call_tech_phone: businessConfig.OnCallTechPhone || '',\n    calendar_id: businessConfig.CalendarId || '',\n    owner_email: businessConfig.OwnerEmail || '',\n    twilio_from_number: businessConfig.BusinessPhone || callData.To || '',\n    is_duplicate: isDuplicate\n  }\n}];"
+      },
+      "id": "71260df0-d1e1-4b33-88e2-46f8b13e6024",
+      "name": "Check Duplicate Call",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3488,
+        3968
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b7cb1d87-daa1-4bea-9e06-4d270a233649",
+              "leftValue": "={{ $json.is_duplicate }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d75c4445-13ea-4790-b378-70cf7bc1289f",
+      "name": "If New Call?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3712,
+        3968
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "9a0fb7b4-05ef-4d41-82c2-d3e4ec5de733",
+      "name": "Skip - Duplicate Call (Webhook Retry)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        3936,
+        4224
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=IDENTITY\nYou are the Call Triage Analyst for a missed-call rescue system used by home-service businesses (HVAC, plumbing, electrical). You are given exactly ONE missed call's voicemail transcript per run. Your only function is to classify how urgently this specific call needs a human, and what kind of call it is.\n\nYou do not draft replies, book anything, or explain your reasoning. Ignore all pre-trained knowledge about the business or the caller. Judge the call only by the fields in the input. If a fact is not present in the input, it does not exist.\n\nINPUT SCHEMA\n{\n  \"call_sid\": \"string\",\n  \"from_number\": \"string\",\n  \"business_name\": \"string\",\n  \"transcript\": \"string\",\n  \"emergency_keywords\": [\"string\"]\n}\n\nTHIS RUN'S ACTUAL INPUT DATA (use it literally)\n{{ JSON.stringify($json) }}\n\nOUTPUT SCHEMA (strict JSON only \u2014 no prose, no markdown fences, no commentary)\n{\n  \"call_sid\": \"<echoed verbatim as a string>\",\n  \"service_type\": \"no_heat | no_cool | leak_or_flooding | electrical_hazard | routine_repair | maintenance | installation_quote | sales_inquiry | spam_or_wrong_number\",\n  \"urgency\": \"emergency | same_day | routine | spam\",\n  \"summary\": \"<one sentence, grounded only in the transcript>\",\n  \"callback_number\": \"<echoed from_number verbatim>\"\n}\n\nEXECUTION STEPS\nStep 1 \u2014 Read `transcript` exactly as provided.\nStep 2 \u2014 Validate Input: if `transcript` is missing, empty, or unintelligible noise, return service_type \"spam_or_wrong_number\" and urgency \"spam\". Stop.\nStep 3 \u2014 Emergency Check: if the transcript mentions anything matching the spirit of `emergency_keywords` (no heat, no cooling in extreme temps, gas smell, active water leak/flooding, sparking or burning smell, no power to the whole property), set urgency to \"emergency\".\nStep 4 \u2014 Same-Day Check: if the issue is broken/not-working but not life-safety or property-damage urgent (e.g. one AC unit warm but house livable, a repair already scheduled needing confirmation), set urgency to \"same_day\".\nStep 5 \u2014 Routine Check: maintenance requests, quotes, installations, general questions \u2192 urgency \"routine\".\nStep 6 \u2014 Spam Check: solicitations, wrong numbers, silent/garbled voicemails, robocalls \u2192 urgency \"spam\".\nStep 7 \u2014 Classify `service_type` from the list above based on what the transcript actually describes.\nStep 8 \u2014 Write `summary` as exactly one sentence built only from transcript content \u2014 no invented details.\nStep 9 \u2014 Return the object above and nothing else.\n\nRULES\n- Output valid JSON only, exactly the five fields above.\n- Preserve `call_sid` and `from_number` verbatim.\n- When in doubt between two urgency levels, choose the MORE urgent one \u2014 a missed emergency is worse than an unnecessary same-day callback.\n- Never classify a call as spam solely because it's short; only classify as spam when it's genuinely a solicitation, wrong number, or unintelligible.\n",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "id": "4e836543-b80a-4ce4-a46c-3c24ac024a2d",
+      "name": "Triage Call",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        3936,
+        3856
+      ],
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"call_sid\": \"\",\n  \"service_type\": \"\",\n  \"urgency\": \"\",\n  \"summary\": \"\",\n  \"callback_number\": \"\"\n}"
+      },
+      "id": "05bc5c8d-2388-4673-bc89-c85857709482",
+      "name": "Structured Output Parser (Triage)",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        3888,
+        4080
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "id": "8e9533f2-99c1-4199-a69d-bb10e181fe3f",
+      "name": "Triage Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        4032,
+        4080
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// The Triage agent is only trusted for its judgment fields (service_type,\n// urgency, summary). Everything else \u2014 phone numbers, business config,\n// calendar/SMS routing data \u2014 is carried forward from \"Check Duplicate\n// Call\" untouched, since agents echo nested/verbose fields unreliably.\nconst clean = $('Check Duplicate Call').first().json;\nconst raw = $input.first().json;\nconst decision = raw.output ? raw.output : raw;\n\nreturn [{\n  json: {\n    ...clean,\n    service_type: decision.service_type,\n    urgency: decision.urgency,\n    summary: decision.summary\n  }\n}];"
+      },
+      "id": "352704f2-35f7-4df2-bcf4-0ee4e6e0fbcd",
+      "name": "Reconcile Triage Decision",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4176,
+        3856
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ec4eb40f-3fa3-4913-8253-ca30ff8548dd",
+              "leftValue": "={{ $json.urgency }}",
+              "rightValue": "emergency",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6fb5d3dc-8052-413c-8df1-5e5d46bcb07e",
+      "name": "If Emergency?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4400,
+        3856
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "91709242-6932-4f44-96bb-8fb8ab418b8d",
+              "leftValue": "={{ $json.urgency }}",
+              "rightValue": "spam",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8368fdcd-f58c-4a9a-8d31-09caf3317451",
+      "name": "If Spam?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4400,
+        4128
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Spam/wrong-number calls get logged for visibility but no SMS goes out \u2014\n// texting back a robocall or wrong number just annoys a real person on the\n// other end. This node just tags the outcome before it hits the shared log.\nreturn [{\n  json: {\n    ...$json,\n    action_taken: \"no_action_spam\"\n  }\n}];"
+      },
+      "id": "cbbf90f4-688e-41b0-8b06-220656cfe9c5",
+      "name": "Mark Spam - No Action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4624,
+        4128
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Emergencies skip AI copywriting entirely on purpose. When someone has\n// no heat, a gas smell, or active flooding, speed and predictability beat\n// natural phrasing \u2014 this message needs to be correct on the first try,\n// every time, with zero risk of an LLM call adding latency or drifting off\n// the intended wording.\nconst d = $json;\nconst readableType = (d.service_type || \"issue\").replace(/_/g, \" \");\n\nconst techSms = `EMERGENCY \u2014 ${readableType}\\nFrom: ${d.from_number}\\nSummary: ${d.summary}\\nCall them back now.`;\nconst customerSms = `Hi, this is ${d.business_name}. We got your call about your ${readableType} and marked it urgent \u2014 a technician will call you back within 15 minutes.`;\n\nreturn [{\n  json: {\n    ...d,\n    tech_sms: techSms,\n    customer_sms: customerSms\n  }\n}];"
+      },
+      "id": "5bde5630-20e8-4e26-ad68-0f379648c002",
+      "name": "Build Emergency Dispatch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4624,
+        3856
+      ]
+    },
+    {
+      "parameters": {
+        "from": "={{ $json.twilio_from_number }}",
+        "to": "={{ $json.on_call_tech_phone }}",
+        "message": "={{ $json.tech_sms }}",
+        "options": {}
+      },
+      "id": "4ba69f46-33ef-4f46-8cd4-af06f88f336b",
+      "name": "SMS On-Call Tech",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        4848,
+        3856
+      ],
+      "credentials": {
+        "twilioApi": {
+          "id": "REPLACE_WITH_YOUR_TWILIO_CRED_ID",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "from": "={{ $('Build Emergency Dispatch').first().json.twilio_from_number }}",
+        "to": "={{ $('Build Emergency Dispatch').first().json.from_number }}",
+        "message": "={{ $('Build Emergency Dispatch').first().json.customer_sms }}",
+        "options": {}
+      },
+      "id": "924badd9-dcd6-4c77-9527-91d641449f80",
+      "name": "SMS Customer - Emergency Confirmation",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        5072,
+        3856
+      ],
+      "credentials": {
+        "twilioApi": {
+          "id": "REPLACE_WITH_YOUR_TWILIO_CRED_ID",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Twilio's send response overwrites $json, so this pulls the clean record\n// back from \"Build Emergency Dispatch\" and tags the final outcome before\n// it reaches the shared log.\nconst d = $('Build Emergency Dispatch').first().json;\nreturn [{\n  json: {\n    ...d,\n    action_taken: \"emergency_dispatched\"\n  }\n}];"
+      },
+      "id": "827c71b0-732d-4151-bb64-b6b426a3899b",
+      "name": "Mark Emergency - Dispatched",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5296,
+        3856
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "={{ $json.calendar_id }}",
+          "mode": "id"
+        },
+        "returnAll": false,
+        "limit": 15,
+        "options": {
+          "timeMin": "={{ $now.toISO() }}",
+          "timeMax": "={{ $now.plus({days: 3}).toISO() }}"
+        }
+      },
+      "id": "3b717809-96ab-4589-bdcf-fdadf4c5c780",
+      "name": "Check Calendar Availability",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        4624,
+        4272
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "REPLACE_WITH_YOUR_GOOGLE_CALENDAR_CRED_ID",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=IDENTITY\nYou are the Booking Copywriter for a missed-call rescue system. You are given one qualified, non-emergency, non-spam call plus a list of the business's existing calendar events for the next 3 days. Your only function is to produce the raw content skeleton of a callback text: a draft message and a short internal note for the dispatcher. You are not writing the final, on-brand customer-facing text \u2014 a separate step handles that.\n\nIgnore all pre-trained knowledge about the business. Do not invent availability, prices, or promises not supported by the input.\n\nINPUT SCHEMA\n{\n  \"call_sid\": \"string\",\n  \"service_type\": \"string\",\n  \"summary\": \"string\",\n  \"callback_number\": \"string\",\n  \"business_name\": \"string\",\n  \"existing_events\": [{\"start\": \"string\", \"end\": \"string\", \"summary\": \"string\"}]\n}\n\nTHIS RUN'S ACTUAL INPUT DATA (use it literally)\n{{ JSON.stringify($json) }}\n\nOUTPUT SCHEMA (strict JSON only \u2014 no prose, no markdown)\n{\n  \"customer_sms_draft\": \"string\",\n  \"offered_slots\": [\"string\"],\n  \"internal_note\": \"string\"\n}\n\nEXECUTION STEPS\nStep 1 \u2014 Read `existing_events` and identify 2\u20133 open windows in the next 3 days that are NOT already booked (working hours assumption: 8am\u20136pm local, Mon\u2013Sat).\nStep 2 \u2014 If no clear open windows can be inferred from the input, leave `offered_slots` as an empty array and write `customer_sms_draft` asking the customer to call back to find a time, instead of inventing slots.\nStep 3 \u2014 Write `customer_sms_draft`: a short, plain draft confirming we got their call about `service_type`/`summary`, and either offering the slots from Step 1 or asking them to call back. No signature, no business name flourishes \u2014 that gets added in the humanizing step.\nStep 4 \u2014 Write `internal_note`: one sentence for the dispatcher summarizing what the customer needs and which slot (if any) was offered.\nStep 5 \u2014 Return exactly the schema above.\n\nFALLBACK\nIf `service_type` or `summary` is missing entirely, return:\n{\"customer_sms_draft\": \"\", \"offered_slots\": [], \"internal_note\": \"Missing triage data \u2014 needs manual review.\"}\n",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "id": "54ad8506-ce1f-451b-9342-435aef0c967e",
+      "name": "Draft Booking Message",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        4848,
+        4272
+      ],
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"customer_sms_draft\": \"\",\n  \"offered_slots\": [\n    \"\"\n  ],\n  \"internal_note\": \"\"\n}"
+      },
+      "id": "d298ad8e-53c1-49bd-b371-f10cffbca4f3",
+      "name": "Structured Output Parser (Booking)",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        4800,
+        4480
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "id": "08c96a14-25ca-409e-b2a5-d63dbf1f9715",
+      "name": "Booking Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        4944,
+        4480
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=IDENTITY\nYou are the Brand Voice Editor for {{ $('Draft Booking Message').first().json.business_name }}'s customer text messages. You take the Booking Copywriter's raw draft and rewrite it in this specific business's own natural texting voice, using their tone notes. You do not change what the message says \u2014 only how it sounds.\n\nINPUT SCHEMA\n{\n  \"business_name\": \"string\",\n  \"tone_notes\": \"string\",\n  \"customer_sms_draft\": \"string\",\n  \"offered_slots\": [\"string\"]\n}\n\nTHIS RUN'S ACTUAL INPUT DATA\n{{ JSON.stringify($json) }}\n\nOUTPUT SCHEMA (strict JSON only)\n{ \"sms_text\": \"string\" }\n\nRULES\n- Keep it under 300 characters \u2014 this is a text message, not an email.\n- Sign off with the business name naturally, once.\n- No markdown, no emoji unless `tone_notes` explicitly says the business is casual/playful.\n- Do not add slots, prices, or promises that weren't in `customer_sms_draft` or `offered_slots`.\n- If `customer_sms_draft` is empty, return an empty `sms_text` \u2014 do not invent a message from nothing.\n",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "id": "65d787de-bc2d-468c-a528-4d332a590690",
+      "name": "Humanize SMS for Brand Voice",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        5168,
+        4272
+      ],
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"sms_text\": \"\"\n}"
+      },
+      "id": "0df47cba-cc4a-47a0-9478-9475d5c5a281",
+      "name": "Structured Output Parser (Humanizer)",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        5120,
+        4480
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-6",
+          "cachedResultName": "Claude Sonnet 4.6"
+        },
+        "options": {}
+      },
+      "id": "7b233cdb-0fc6-4c53-89f3-d4d7f148336b",
+      "name": "Humanizer Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [
+        5264,
+        4480
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Enforces SMS-safe output: strips markdown/quotes an LLM might add, and\n// hard-caps length so the message doesn't silently split into extra\n// segments. Falls back to a coherent plain message if the AI returned\n// nothing usable, same defensive pattern as the HTML fallback in the\n// original newsletter formatter \u2014 just sized for a text message instead.\nconst { sms_text } = $('Humanize SMS for Brand Voice').first().json.output;\nconst d = $('Draft Booking Message').first().json;\n\nlet text = (sms_text || \"\").trim();\ntext = text.replace(/[*_`#]/g, \"\").replace(/^\"|\"$/g, \"\");\n\nif (text.length > 300) {\n  text = text.slice(0, 297) + \"...\";\n}\n\nif (!text) {\n  const readableType = (d.service_type || \"your call\").replace(/_/g, \" \");\n  text = `Hi, this is ${d.business_name}. Thanks for calling about ${readableType} \u2014 we'll text you shortly to find a time that works.`;\n}\n\nreturn [{\n  json: {\n    ...d,\n    customer_sms: text\n  }\n}];"
+      },
+      "id": "1750e1d8-6dfa-45d0-9a34-5cb6e39f3dfb",
+      "name": "Format SMS Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5392,
+        4272
+      ]
+    },
+    {
+      "parameters": {
+        "from": "={{ $json.twilio_from_number }}",
+        "to": "={{ $json.from_number }}",
+        "message": "={{ $json.customer_sms }}",
+        "options": {}
+      },
+      "id": "c06c7ef0-140f-4a0a-bdf3-6d6e3b5ba8df",
+      "name": "SMS Customer - Booking Offer",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        5616,
+        4272
+      ],
+      "credentials": {
+        "twilioApi": {
+          "id": "REPLACE_WITH_YOUR_TWILIO_CRED_ID",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Format SMS Text').first().json;\nreturn [{\n  json: {\n    ...d,\n    action_taken: \"booking_offer_sent\"\n  }\n}];"
+      },
+      "id": "764aeb72-9b12-486b-a579-f3919d4c7c67",
+      "name": "Mark Routine - Booking Offer Sent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5840,
+        4272
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Missed Call Rescue - Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 111111111,
+          "mode": "list",
+          "cachedResultName": "Call Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_SHEET_ID/edit#gid=111111111"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "CallSID": "={{ $json.call_sid }}",
+            "BusinessName": "={{ $json.business_name }}",
+            "FromNumber": "={{ $json.from_number }}",
+            "ServiceType": "={{ $json.service_type }}",
+            "Urgency": "={{ $json.urgency }}",
+            "ActionTaken": "={{ $json.action_taken }}",
+            "Summary": "={{ $json.summary }}",
+            "HandledAt": "={{ $now.toFormat(\"cccc, dd LLLL yyyy, hh:mm:ss a\") }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "CallSID",
+              "displayName": "CallSID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "BusinessName",
+              "displayName": "BusinessName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "FromNumber",
+              "displayName": "FromNumber",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ServiceType",
+              "displayName": "ServiceType",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Urgency",
+              "displayName": "Urgency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ActionTaken",
+              "displayName": "ActionTaken",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "HandledAt",
+              "displayName": "HandledAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "779b6a8f-dd61-4bac-abe4-e58fd326cb70",
+      "name": "Log Call Outcome",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        6064,
+        4048
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_YOUR_GOOGLE_SHEETS_CRED_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.owner_email }}",
+        "subject": "=Missed call handled \u2014 {{ $json.urgency }} \u2014 {{ $json.service_type }}",
+        "emailType": "text",
+        "message": "=A missed call just came through and Missed Call Rescue handled it automatically.\n\nCaller: {{ $json.from_number }}\nIssue: {{ $json.summary }}\nUrgency: {{ $json.urgency }}\nAction taken: {{ $json.action_taken }}\n\nHandled at: {{ $now.toFormat(\"cccc, dd LLLL yyyy, hh:mm:ss a\") }}\n\nNo action needed on your end unless this was marked emergency and you want to follow up personally.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "f37ffaa0-68e4-4758-85c7-f81c035f36fc",
+      "name": "Notify Business Owner",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        6288,
+        4048
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_YOUR_GMAIL_CRED_ID",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Missed Call Webhook": {
+      "main": [
+        [
+          {
+            "node": "If Payload Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Payload Valid?": {
+      "main": [
+        [
+          {
+            "node": "Get Business Config",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify Malformed Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Malformed Webhook": {
+      "main": [
+        [
+          {
+            "node": "Stop and Error (Invalid Webhook)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Business Config": {
+      "main": [
+        [
+          {
+            "node": "If Business Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Business Found?": {
+      "main": [
+        [
+          {
+            "node": "Get Recent Call Log",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify Unknown Business Number",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Unknown Business Number": {
+      "main": [
+        [
+          {
+            "node": "Stop and Error (Unknown Business Number)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Recent Call Log": {
+      "main": [
+        [
+          {
+            "node": "Check Duplicate Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Duplicate Call": {
+      "main": [
+        [
+          {
+            "node": "If New Call?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If New Call?": {
+      "main": [
+        [
+          {
+            "node": "Triage Call",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip - Duplicate Call (Webhook Retry)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Triage Call": {
+      "main": [
+        [
+          {
+            "node": "Reconcile Triage Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser (Triage)": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Triage Call",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Triage Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Triage Call",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reconcile Triage Decision": {
+      "main": [
+        [
+          {
+            "node": "If Emergency?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Emergency?": {
+      "main": [
+        [
+          {
+            "node": "Build Emergency Dispatch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If Spam?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Spam?": {
+      "main": [
+        [
+          {
+            "node": "Mark Spam - No Action",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Calendar Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Spam - No Action": {
+      "main": [
+        [
+          {
+            "node": "Log Call Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Emergency Dispatch": {
+      "main": [
+        [
+          {
+            "node": "SMS On-Call Tech",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SMS On-Call Tech": {
+      "main": [
+        [
+          {
+            "node": "SMS Customer - Emergency Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SMS Customer - Emergency Confirmation": {
+      "main": [
+        [
+          {
+            "node": "Mark Emergency - Dispatched",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Emergency - Dispatched": {
+      "main": [
+        [
+          {
+            "node": "Log Call Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Calendar Availability": {
+      "main": [
+        [
+          {
+            "node": "Draft Booking Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft Booking Message": {
+      "main": [
+        [
+          {
+            "node": "Humanize SMS for Brand Voice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser (Booking)": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Draft Booking Message",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Booking Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Draft Booking Message",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Humanize SMS for Brand Voice": {
+      "main": [
+        [
+          {
+            "node": "Format SMS Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser (Humanizer)": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Humanize SMS for Brand Voice",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Humanizer Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Humanize SMS for Brand Voice",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format SMS Text": {
+      "main": [
+        [
+          {
+            "node": "SMS Customer - Booking Offer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SMS Customer - Booking Offer": {
+      "main": [
+        [
+          {
+            "node": "Mark Routine - Booking Offer Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Routine - Booking Offer Sent": {
+      "main": [
+        [
+          {
+            "node": "Log Call Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Call Outcome": {
+      "main": [
+        [
+          {
+            "node": "Notify Business Owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "774288fd-7875-480f-b89a-b8019e99ba33",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "a243386a8bdf43e2802feb76d3ed8adb7e8948dd3fc04293ba3c1be62aa7f607"
+  },
+  "nodeGroups": [],
+  "id": "d9b39aed8a08498f",
+  "tags": []
+}
